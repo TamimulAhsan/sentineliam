@@ -1,0 +1,225 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* SentinelIAM Design System - Cyber-Precision 2026 */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@layer base {
+  :root {
+    /* Core Dark Theme - Charcoal Neutrals */
+    --background: 220 20% 4%; /* #0B0D10 */
+    --foreground: 210 40% 96%;
+    
+    --card: 220 18% 8%; /* #151A21 */
+    --card-foreground: 210 40% 96%;
+    
+    --popover: 220 18% 8%;
+    --popover-foreground: 210 40% 96%;
+    
+    /* Electric Cyan Primary */
+    --primary: 187 100% 63%; /* #40E0FF */
+    --primary-foreground: 220 20% 4%;
+    
+    /* Surface Colors */
+    --secondary: 220 15% 12%;
+    --secondary-foreground: 210 30% 85%;
+    
+    --muted: 220 15% 15%;
+    --muted-foreground: 215 20% 55%;
+    
+    --accent: 187 100% 63%;
+    --accent-foreground: 220 20% 4%;
+    
+    /* Status Colors */
+    --destructive: 0 72% 65%; /* #FF4D4D */
+    --destructive-foreground: 210 40% 98%;
+    
+    --success: 160 84% 39%; /* #10B981 */
+    --success-foreground: 210 40% 98%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 220 20% 4%;
+    
+    /* UI Elements */
+    --border: 220 15% 18%;
+    --input: 220 15% 12%;
+    --ring: 187 100% 63%;
+    
+    --radius: 0.75rem;
+    
+    /* Glassmorphism */
+    --glass-bg: 220 20% 8% / 0.6;
+    --glass-border: 220 15% 25% / 0.3;
+    --glass-blur: 20px;
+    
+    /* Glows */
+    --glow-primary: 0 0 30px hsl(187 100% 63% / 0.3);
+    --glow-success: 0 0 20px hsl(160 84% 39% / 0.4);
+    --glow-danger: 0 0 20px hsl(0 72% 65% / 0.4);
+    
+    /* Sidebar */
+    --sidebar-background: 220 18% 6%;
+    --sidebar-foreground: 210 30% 75%;
+    --sidebar-primary: 187 100% 63%;
+    --sidebar-primary-foreground: 220 20% 4%;
+    --sidebar-accent: 220 15% 12%;
+    --sidebar-accent-foreground: 210 30% 90%;
+    --sidebar-border: 220 15% 15%;
+    --sidebar-ring: 187 100% 63%;
+  }
+
+  .dark {
+    /* Same as root - this is a dark-only theme */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/30;
+  }
+}
+
+@layer components {
+  /* Glassmorphism Card */
+  .glass-card {
+    @apply bg-card/60 backdrop-blur-xl border border-white/5 rounded-xl;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+  
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300;
+  }
+  
+  .glass-card-hover:hover {
+    @apply border-primary/30;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), var(--glow-primary);
+  }
+  
+  /* Glow Effects */
+  .glow-primary {
+    box-shadow: var(--glow-primary);
+  }
+  
+  .glow-success {
+    box-shadow: var(--glow-success);
+  }
+  
+  .glow-danger {
+    box-shadow: var(--glow-danger);
+  }
+  
+  /* Status Indicators */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+  
+  .status-dot-success {
+    @apply status-dot bg-success;
+    animation: pulse-success 2s ease-in-out infinite;
+  }
+  
+  .status-dot-danger {
+    @apply status-dot bg-destructive;
+    animation: pulse-danger 1.5s ease-in-out infinite;
+  }
+  
+  .status-dot-inactive {
+    @apply status-dot bg-muted-foreground/40;
+  }
+  
+  /* Cyber Grid Background */
+  .cyber-grid {
+    background-image: 
+      linear-gradient(rgba(64, 224, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(64, 224, 255, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+  
+  /* Terminal Style Input */
+  .terminal-input {
+    @apply bg-background/80 border border-border rounded-lg px-4 py-3 
+           font-mono text-sm text-foreground placeholder:text-muted-foreground
+           focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary
+           transition-all duration-200;
+  }
+  
+  /* Gradient Text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary via-cyan-400 to-primary bg-clip-text text-transparent;
+  }
+}
+
+@layer utilities {
+  @keyframes pulse-success {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 hsl(160 84% 39% / 0.4);
+    }
+    50% {
+      opacity: 0.8;
+      box-shadow: 0 0 0 8px hsl(160 84% 39% / 0);
+    }
+  }
+  
+  @keyframes pulse-danger {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 hsl(0 72% 65% / 0.4);
+    }
+    50% {
+      opacity: 0.8;
+      box-shadow: 0 0 0 8px hsl(0 72% 65% / 0);
+    }
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  @keyframes glow-pulse {
+    0%, 100% {
+      box-shadow: 0 0 20px hsl(187 100% 63% / 0.3);
+    }
+    50% {
+      box-shadow: 0 0 40px hsl(187 100% 63% / 0.5);
+    }
+  }
+  
+  .animate-glow-pulse {
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+}
