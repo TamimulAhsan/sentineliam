@@ -12,7 +12,9 @@ export interface IAMPolicy {
   risk_score: number;
   is_vulnerable: boolean;
   finding_details: {
-    issues: string[];
+    issues?: string[];
+    reason?: string;
+    severity?: string;
   };
 }
 
@@ -76,12 +78,19 @@ const PolicyEditor: React.FC<PolicyEditorProps> = ({ policy, onSave, initialRead
           
           <h4 className="text-[10px] font-bold text-slate-500 uppercase mb-3">Analysis Findings</h4>
           <ul className="space-y-3">
-            {policy.finding_details.issues.map((issue, i) => (
+            {(policy.finding_details?.issues || []).map((issue, i) => (
               <li key={i} className="text-xs text-slate-300 flex gap-2 leading-relaxed">
                 <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
                 {issue}
               </li>
             ))}
+            {/* ADDITION: Display the "reason" field from our seed script if issues are empty */}
+            {(!policy.finding_details?.issues || policy.finding_details.issues.length === 0) && policy.finding_details?.reason && (
+              <li className="text-xs text-slate-300 flex gap-2 leading-relaxed italic">
+                <AlertTriangle size={14} className="text-indigo-400 shrink-0 mt-0.5" />
+                {policy.finding_details.reason}
+              </li>
+            )}
           </ul>
         </div>
 

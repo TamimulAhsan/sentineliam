@@ -8,7 +8,7 @@ from .scanner import SecurityScanner  # We'll put the scanner logic in a separat
 from azure.identity import ClientSecretCredential
 from azure.mgmt.authorization import AuthorizationManagementClient
 from google.oauth2 import service_account
-from google.cloud import iam_v1
+from google.cloud import iam_v2
 
 @shared_task
 def sync_cloud_iam(account_id):
@@ -92,7 +92,7 @@ def fetch_azure_iam_data(account):
 def fetch_gcp_iam_data(account):
     info = account.extra_config.get('service_account_json')
     creds = service_account.Credentials.from_service_account_info(info)
-    client = iam_v1.IAMClient(credentials=creds)
+    client = iam_v2.IAMClient(credentials=creds)
     project_id = info.get('project_id')
     
     for sa in client.list_service_accounts(name=f"projects/{project_id}"):

@@ -5,7 +5,7 @@ from .models import IAMEntity, IAMPolicy
 from azure.identity import ClientSecretCredential
 from azure.mgmt.authorization import AuthorizationManagementClient
 
-from google.cloud import iam_v1
+from google.cloud import iam_v2
 from google.oauth2 import service_account
 from google.cloud import resourcemanager_v3
 
@@ -97,11 +97,11 @@ def fetch_gcp_iam_data(cloud_account):
     # GCP usually uses a Service Account JSON (stored in extra_config)
     info = cloud_account.extra_config.get('service_account_json')
     creds = service_account.Credentials.from_service_account_info(info)
-    client = iam_v1.IAMClient(credentials=creds)
+    client = iam_v2.IAMClient(credentials=creds)
     
     project_id = info.get('project_id')
     # List Service Accounts (The GCP equivalent of IAM Users)
-    request = iam_v1.ListServiceAccountsRequest(name=f"projects/{project_id}")
+    request = iam_v2.ListServiceAccountsRequest(name=f"projects/{project_id}")
     page_result = client.list_service_accounts(request=request)
 
     for sa in page_result:

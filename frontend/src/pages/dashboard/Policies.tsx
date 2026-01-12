@@ -1,28 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   FileText, Search, Filter, AlertTriangle, 
-  CheckCircle, Clock, Eye, Edit2, Trash2, X, RefreshCw
+  CheckCircle, Clock, Eye, Edit2, Trash2, X, RefreshCw, Loader,
+  ArrowUpDown, ArrowUp, ArrowDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MOCK_POLICIES } from '../../components/policies/mockdata'; 
+import { getPolicies, updatePolicy, deletePolicy } from '../../components/policies/api'; 
 import PolicyEditor from '../../components/policies/components/PolicyEditor';
 import { IAMPolicy } from '../../components/policies/components/PolicyEditor';
+import { useToast } from "@/components/ui/use-toast";
 
-
-// Updated interface to match your Mock Data + UI needs
-interface Policy {
-  id: string | number;
-  name: string;
-  platform: "aws" | "azure" | "gcp"; // Matching MockData
-  entity_name: string;
-  status?: "compliant" | "violation" | "pending";
-  risk_score: number;
-  is_vulnerable: boolean;
-  lastModified?: string;
-  document: any;
-  finding_details: { issues: string[] };
-}
 
 const platformColors = {
   aws: "text-amber-400",
@@ -31,10 +19,13 @@ const platformColors = {
 };
 
 const Policies = () => {
+  const { toast } = useToast();
   // 1. STATE MANAGEMENT
-  const [policies, setPolicies] = useState<IAMPolicy[]>(MOCK_POLICIES as IAMPolicy[]);
+  const [policies, setPolicies] = useState<IAMPolicy[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   
   // Modal & Editing State
@@ -42,45 +33,95 @@ const Policies = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editorInitialMode, setEditorInitialMode] = useState(true);
 
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
 
+  const toggleSort = () => {
+    setSortOrder(prev => (prev === 'desc' ? 'asc' : 'desc'));
+  };
+
+  
   //complex filter state
   const [filters, setFilters] = useState({
     platforms: [] as string[],
     minRisk: 0,
     maxRisk: 100,
-    entityType: "all", // e.g., 'User', 'Role', 'Group' if data supports it
   });
-  // 2. HANDLERS
+
+  // 2. DATA FETCHING
+  useEffect(() => {
+    const fetchPolicies = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getPolicies();
+        setPolicies(data);
+        setError(null);
+      } catch (err: any) {
+        setError(err.message || "An unexpected error occurred.");
+        toast({
+          variant: "destructive",
+          title: "Error Fetching Policies",
+          description: err.message,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPolicies();
+  }, [toast]);
+
+
+  // 3. HANDLERS
   const handleViewClick = (policy: IAMPolicy) => {
-  setEditingPolicy(policy);
-  setEditorInitialMode(true); // Force Read-Only
-  setIsEditorOpen(true);
-};
+    setEditingPolicy(policy);
+    setEditorInitialMode(true); // Force Read-Only
+    setIsEditorOpen(true);
+  };
 
   const handleEditClick = (policy: IAMPolicy) => {
-  setEditingPolicy(policy);
-  setEditorInitialMode(false); // Force Write Mode
-  setIsEditorOpen(true);
-};;
+    setEditingPolicy(policy);
+    setEditorInitialMode(false); // Force Write Mode
+    setIsEditorOpen(true);
+  };
 
   const handleSave = async (id: number | string, updatedDoc: object) => {
-    console.log("Saving Policy ID:", id, updatedDoc);
-    
-    // In a real app, you'd await an API call here
-    setPolicies(prev => prev.map(p => 
-      p.id === id ? { 
-        ...p, 
-        document: updatedDoc, 
-        lastModified: "Just now",
-        // Logic: if they fixed the wildcard, maybe it's no longer a violation?
-        status: "compliant",
-        is_vulnerable: false,
-        risk_score: 0
-      } : p
-    ));
-    
-    setIsEditorOpen(false);
-    setEditingPolicy(null);
+    try {
+      const updatedPolicy = await updatePolicy(id, updatedDoc);
+      setPolicies(prev => prev.map(p => (p.id === id ? updatedPolicy : p)));
+      toast({
+        title: "Policy Updated",
+        description: `Successfully updated ${updatedPolicy.name}.`,
+      });
+      setIsEditorOpen(false);
+      setEditingPolicy(null);
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: err.message,
+      });
+    }
+  };
+
+  const handleDelete = async (id: number | string) => {
+    // Optimistic UI update
+    const originalPolicies = policies;
+    setPolicies(prev => prev.filter(p => p.id !== id));
+
+    try {
+      await deletePolicy(id);
+      toast({
+        title: "Policy Deleted",
+        description: "The policy has been successfully removed.",
+      });
+    } catch (err: any) {
+      // Revert on error
+      setPolicies(originalPolicies);
+      toast({
+        variant: "destructive",
+        title: "Deletion Failed",
+        description: err.message,
+      });
+    }
   };
 
   //filtering logic
@@ -97,6 +138,13 @@ const Policies = () => {
     return matchesSearch && matchesPlatform && matchesRisk;
   });
 
+  const sortedPolicies = [...filteredPolicies].sort((a, b) => {
+    if (!sortOrder) return 0;
+    return sortOrder === 'desc' 
+    ? b.risk_score - a.risk_score 
+    : a.risk_score - b.risk_score;
+  });
+
   const togglePlatform = (p: string) => {
     setFilters(prev => ({
       ...prev,
@@ -105,6 +153,26 @@ const Policies = () => {
         : [...prev.platforms, p]
     }));
   };
+
+  // UI Components for Loading/Error states
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader className="w-8 h-8 animate-spin text-indigo-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-8 glass-card border-destructive/50">
+        <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
+        <h2 className="text-xl font-bold mb-2">Failed to Load Policies</h2>
+        <p className="text-muted-foreground">{error}</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-6 relative">
@@ -122,9 +190,9 @@ const Policies = () => {
       
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard icon={<CheckCircle className="text-success" />} label="Compliant" value="847" delay={0} />
-        <StatCard icon={<AlertTriangle className="text-destructive" />} label="Violations" value="23" delay={0.1} />
-        <StatCard icon={<Clock className="text-warning" />} label="Pending" value="12" delay={0.2} />
+        <StatCard icon={<CheckCircle className="text-success" />} label="Compliant" value={policies.filter(p => !p.is_vulnerable).length} delay={0} />
+        <StatCard icon={<AlertTriangle className="text-destructive" />} label="Violations" value={policies.filter(p => p.is_vulnerable).length} delay={0.1} />
+        <StatCard icon={<Clock className="text-warning" />} label="Total Policies" value={policies.length} delay={0.2} />
       </div>
       
       {/* Filters */}
@@ -203,14 +271,11 @@ const Policies = () => {
                   variant="ghost" 
                   size="sm" 
                   className="text-muted-foreground hover:text-foreground"
-                  onClick={() => setFilters({ platforms: [], minRisk: 0, maxRisk: 100, entityType: "all" })}
+                  onClick={() => setFilters({ platforms: [], minRisk: 0, maxRisk: 100 })}
                 >
                   <RefreshCw className="w-3 h-3 mr-2" />
                   Reset Filters
                 </Button>
-                {/* <p className="text-[10px] text-slate-600 italic">
-                  Showing {filteredPolicies.length} of {policies.length} total policies
-                </p> */}
               </div>
             </div>
           </motion.div>
@@ -229,12 +294,28 @@ const Policies = () => {
               <th className="p-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">Policy Name</th>
               <th className="p-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">Platform</th>
               <th className="p-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">Entity</th>
-              <th className="p-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">Risk Score</th>
+              <th 
+                onClick={toggleSort}
+                className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-indigo-400 transition-colors group"
+              >
+                <div className="flex items-center gap-2">
+                  Risk Score
+                  <span className="text-slate-500 group-hover:text-indigo-400">
+                    {sortOrder === 'desc' ? (
+                      <ArrowDown size={14} className="text-indigo-400" />
+                    ) : sortOrder === 'asc' ? (
+                      <ArrowUp size={14} className="text-indigo-400" />
+                    ) : (
+                      <ArrowUpDown size={14} />
+                    )}
+                  </span>
+                </div>
+              </th>
               <th className="p-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredPolicies.map((policy, index) => (
+            {filteredPolicies.map((policy) => (
               <tr key={policy.id} className="border-b border-border/50 hover:bg-secondary/10 transition-colors group">
                 <td className="p-4">
                   <div className="flex items-center gap-3">
@@ -261,7 +342,7 @@ const Policies = () => {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditClick(policy)}>
                       <Edit2 className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(policy.id)}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
@@ -295,7 +376,7 @@ const Policies = () => {
                 <PolicyEditor 
                   policy={editingPolicy} 
                   initialReadOnly={editorInitialMode}
-                  onSave={(id, doc) => handleSave(id, doc)} 
+                  onSave={(id, updatedDoc) => handleSave(id, updatedDoc)}
                 />
               </div>
             </motion.div>
